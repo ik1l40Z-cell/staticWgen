@@ -3,12 +3,12 @@ class HTMLNode:
 		self,
 		tag: str | None = None,
 		value: str | None = None,
-		children: list["HTMLNode"] | None = None,
+		child: list["HTMLNode"] | None = None,
 		props: dict[str, str] | None = None,
 	):
 		self.tag = tag
 		self.value = value
-		self.children = children
+		self.child = child
 		self.props = props
 
 	def to_html(self):
@@ -23,7 +23,7 @@ class HTMLNode:
 		return prop
 
 	def __repr__(self) -> str:
-		return f"{self.tag} {self.value} {self.children} {self.props}"
+		return f"{self.tag} {self.value} {self.child} {self.props}"
 
 
 class LeafNode(HTMLNode):
@@ -33,7 +33,7 @@ class LeafNode(HTMLNode):
 		value: str,
 		props: dict[str, str] | None = None,
 	):
-		super().__init__(tag, value, children=None, props=props)
+		super().__init__(tag, value, child=None, props=props)
 
 	def to_html(self) -> str:
 		if not self.value:
@@ -45,3 +45,24 @@ class LeafNode(HTMLNode):
 
 	def __repr__(self) -> str:
 		return f"{self.tag} {self.value} {self.props}"
+
+
+class ParentNode(HTMLNode):
+	def __init__(
+		self,
+		tag: str,
+		child: list["HTMLNode"],
+		props: dict[str, str] | None = None,
+	):
+		super().__init__(tag, value=None, child=child, props=props)
+
+	def to_html(self) -> str:
+		if self.tag is None:
+			raise ValueError("need for marker")
+		if self.child is None:
+			raise ValueError("missing children")
+		create = ""
+		made = self.props_to_html()
+		for chi in self.child:
+			create += chi.to_html()
+		return f"<{self.tag}{made}>{create}</{self.tag}>"
