@@ -1,5 +1,5 @@
 import unittest
-from marknode import split_nodes_delimiter
+from marknode import split_nodes_delimiter, extract_markdown_images, extract_markdown_links
 from textnode import TextType, TextNode
 
 class TestSplitNodesDelimiter(unittest.TestCase):
@@ -95,3 +95,46 @@ class TestSplitNodesDelimiter(unittest.TestCase):
         olnod = [TextNode("**dig**it**", TextType.PLAIN_TYPE)]
         with self.assertRaises(ValueError):
             split_nodes_delimiter(olnod, "**", TextType.BOLD_TYPE)
+
+class TestExtractMarkdownImages(unittest.TestCase):
+    def test_xtr_md_imgs_solo(self):
+        matches = extract_markdown_images(
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png)"
+        )
+        self.assertListEqual([("image", "https://i.imgur.com/zjjcJKZ.png")], matches)
+
+    def test_xtr_md_imgs_double(self):
+        matches = extract_markdown_images(
+            "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and ![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+        )
+        lit = [
+            ("rick roll", "https://i.imgur.com/aKaOqIh.gif"),
+            ("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg"),
+        ]
+        self.assertListEqual(lit, matches)
+
+class TestExtractMarkdownLinks(unittest.TestCase):
+    def test_xtr_md_liks_solo(self):
+        matches = extract_markdown_links(
+            "This is text with a [link](https://www.boot.dev)"
+        )
+        self.assertListEqual([("link", "https://www.boot.dev")], matches)
+
+    def test_xtr_md_liks_double(self):
+        matches = extract_markdown_links(
+            "Go to [the yellow book](https://www.yellowpages.com) to find anything and [the king in yellow](https://www.carcosa.gov) to lose it all !"
+        )
+        lit = [
+            ("the yellow book", "https://www.yellowpages.com"),
+            ("the king in yellow", "https://www.carcosa.gov"),
+        ]
+        self.assertListEqual(lit, matches)
+
+    def test_xtr_md_liks_mixed(self):
+        matches = extract_markdown_links(
+            "Go to [the yellow book](https://www.yellowpages.com) to find anything and ![the king in yellow](https://www.carcosa.gov) to lose it all !"
+        )
+        lit = [
+            ("the yellow book", "https://www.yellowpages.com"),
+        ]
+        self.assertListEqual(lit, matches)
