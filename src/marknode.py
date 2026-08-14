@@ -39,3 +39,67 @@ def extract_markdown_images(text: str) -> list[tuple[str]]:
 
 def extract_markdown_links(text: str) -> list[tuple[str]]:
 	return re.findall(r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)", text)
+
+def split_nodes_images(old_nodes: list[TextNode]) -> list[TextNode]:
+	marked = []
+	for olnod in old_nodes:
+		if olnod.text_type == TextType.IMAGE_TYPE:
+			marked.append(olnod)
+			continue
+		parts = extract_markdown_images(olnod.text)
+		if parts == []:
+			marked.append(olnod)
+			continue
+		nunods = []
+		undods = []
+		to_split = olnod.text
+		for prt in parts:
+			node = TextNode(
+				prt[0],
+				TextType.IMAGE_TYPE,
+				prt[1],
+			)
+			nunods.append(node)
+			splat, to_split = to_split.split(f"![{prt[0]}]({prt[1]})", 1)
+			undods.append(TextNode(splat, TextType.PLAIN_TYPE))
+			if extract_markdown_images(to_split) == []:
+				undods.append(TextNode(to_split, TextType.PLAIN_TYPE))
+		for dex in range(len(nunods)):
+			if undods[dex].text != "":
+				marked.append(undods[dex])
+			marked.append(nunods[dex])
+		if len(undods) > 1 and undods[-1].text != "":
+			marked.append(undods[-1])
+	return marked
+
+def split_nodes_links(old_nodes: list[TextNode]) -> list[TextNode]:
+	marked = []
+	for olnod in old_nodes:
+		if olnod.text_type == TextType.LINK_TYPE:
+			marked.append(olnod)
+			continue
+		parts = extract_markdown_links(olnod.text)
+		if parts == []:
+			marked.append(olnod)
+			continue
+		nunods = []
+		undods = []
+		to_split = olnod.text
+		for prt in parts:
+			node = TextNode(
+				prt[0],
+				TextType.LINK_TYPE,
+				prt[1],
+			)
+			nunods.append(node)
+			splat, to_split = to_split.split(f"[{prt[0]}]({prt[1]})", 1)
+			undods.append(TextNode(splat, TextType.PLAIN_TYPE))
+			if extract_markdown_links(to_split) == []:
+                                undods.append(TextNode(to_split, TextType.PLAIN_TYPE))
+		for dex in range(len(nunods)):
+			if undods[dex].text != "":
+				marked.append(undods[dex])
+			marked.append(nunods[dex])
+		if len(undods) > 1 and undods[-1].text != "":
+			marked.append(undods[-1])
+	return marked
