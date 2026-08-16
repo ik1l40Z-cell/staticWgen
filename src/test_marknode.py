@@ -1,6 +1,6 @@
 import unittest
 from marknode import split_nodes_delimiter, extract_markdown_images, extract_markdown_links
-from marknode import split_nodes_images, split_nodes_links
+from marknode import split_nodes_images, split_nodes_links, text_to_textnodes
 from textnode import TextType, TextNode
 
 class TestSplitNodesDelimiter(unittest.TestCase):
@@ -187,8 +187,7 @@ class TestSplitNodesImages(unittest.TestCase):
     def test_splimages_flushed(self):
         olnod = TextNode("This is a picture of a horse: [honse]", TextType.PLAIN_TYPE)
         nunod = split_nodes_images([olnod])
-        renod = [TextNode("This is a picture of a horse: [honse]", TextType.PLAIN_TYPE)]
-        self.assertListEqual(nunod, renod)
+        self.assertListEqual(nunod, [olnod])
 
     def test_splimages_early(self):
         olnod = TextNode(
@@ -555,3 +554,64 @@ class TestSplitNodesLinks(unittest.TestCase):
             ),
         ]
         self.assertListEqual(nunod, renod)
+
+class TestTextToTextnodes(unittest.TestCase):
+    def test_ttt_plain(self):
+        node = TextNode(
+            "There is nothing special here.",
+            TextType.PLAIN_TYPE,
+        )
+        self.assertEqual(text_to_textnodes("There is nothing special here."), [node])
+
+    def test_ttt_triple(self):
+        text = "There is _something_ special here, `while True:` it is of no **matter !**"
+        node = [
+            TextNode("There is ", TextType.PLAIN_TYPE),
+            TextNode("something", TextType.ITALIC_TYPE),
+            TextNode(" special here, ", TextType.PLAIN_TYPE),
+            TextNode("while True:", TextType.CODE_TYPE),
+            TextNode(" it is of no ", TextType.PLAIN_TYPE),
+            TextNode("matter !", TextType.BOLD_TYPE),
+        ]
+        self.assertEqual(text_to_textnodes(text), node)
+
+    def test_ttt_mixxed(self):
+        text = (
+            "This is **text** with an _italic_ word and a `code block` and an ![obi "
+            "wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+        )
+        node = [
+            TextNode("This is ", TextType.PLAIN_TYPE),
+            TextNode("text", TextType.BOLD_TYPE),
+            TextNode(" with an ", TextType.PLAIN_TYPE),
+            TextNode("italic", TextType.ITALIC_TYPE),
+            TextNode(" word and a ", TextType.PLAIN_TYPE),
+            TextNode("code block", TextType.CODE_TYPE),
+            TextNode(" and an ", TextType.PLAIN_TYPE),
+            TextNode(
+                "obi wan image",
+                TextType.IMAGE_TYPE,
+                "https://i.imgur.com/fJRm4Vk.jpeg",
+            ),
+            TextNode(" and a ", TextType.PLAIN_TYPE),
+            TextNode("link", TextType.LINK_TYPE, "https://boot.dev"),
+        ]
+        self.assertEqual(text_to_textnodes(text), node)
+
+    def test_ttt_empty(self):
+        self.assertEqual(text_to_textnodes(""), [])
+
+    def test_ttt_voided(self):
+        text = (
+            "This is **** with an __ word and a `` and an !["
+            "](https://i.imgur.com/bsbWldj.jpeg) and a [](https://ttt.nowhere.net)"
+        )
+        node = [
+            TextNode("This is ", TextType.PLAIN_TYPE),
+            TextNode(" with an ", TextType.PLAIN_TYPE),
+            TextNode(" word and a ", TextType.PLAIN_TYPE),
+            TextNode(" and an ", TextType.PLAIN_TYPE),
+            TextNode("", TextType.IMAGE_TYPE, "https://i.imgur.com/bsbWldj.jpeg"),
+            TextNode(" and a ", TextType.PLAIN_TYPE),
+        ]
+        self.assertEqual(text_to_textnodes(text), node)

@@ -67,7 +67,8 @@ def split_nodes_images(old_nodes: list[TextNode]) -> list[TextNode]:
 		for dex in range(len(nunods)):
 			if undods[dex].text != "":
 				marked.append(undods[dex])
-			marked.append(nunods[dex])
+			if nunods[dex].url != "":
+				marked.append(nunods[dex])
 		if len(undods) > 1 and undods[-1].text != "":
 			marked.append(undods[-1])
 	return marked
@@ -99,7 +100,17 @@ def split_nodes_links(old_nodes: list[TextNode]) -> list[TextNode]:
 		for dex in range(len(nunods)):
 			if undods[dex].text != "":
 				marked.append(undods[dex])
-			marked.append(nunods[dex])
+			if nunods[dex].url != "" and nunods[dex].text != "":
+				marked.append(nunods[dex])
 		if len(undods) > 1 and undods[-1].text != "":
 			marked.append(undods[-1])
 	return marked
+
+def text_to_textnodes(text: str) -> list[TextNode]:
+	init_node = [TextNode(text, TextType.PLAIN_TYPE)]
+	bold_nods = split_nodes_delimiter(init_node, "**", TextType.BOLD_TYPE)
+	ital_nods = split_nodes_delimiter(bold_nods, "_", TextType.ITALIC_TYPE)
+	code_nods = split_nodes_delimiter(ital_nods, "`", TextType.CODE_TYPE)
+	imag_nods = split_nodes_images(code_nods)
+	link_nods = split_nodes_links(imag_nods)
+	return link_nods
