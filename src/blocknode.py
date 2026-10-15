@@ -1,4 +1,8 @@
+from textnode import text_node_to_html_node, TextNode, TextType
+from marknode import text_to_textnodes
+from htmlnode import ParentNode
 from enum import Enum
+import re
 
 def markdown_to_blocks(markdown):
 	marked = []
@@ -49,3 +53,75 @@ def block_to_block_type(md_block: str) -> "BlockType":
 		if validO:
 			return BlockType.ORDER_LST
 	return BlockType.BLOCK
+
+def count_block_hash(block: str) -> int:
+	indx = 0
+	while indx < len(block) and block[indx] == "#":
+		indx += 1
+	return indx
+
+def list_items_tagged(block: str, type: "BlockType") -> list["LeafNode"]:
+	tag_lst = []
+	clean = ""
+	for line in block.split("\n"):
+		if type == BlockType.UNORD_LST:
+			clean = line[2:]
+		if type == BlockType.ORDER_LST:
+			clean = re.sub(r"^\d+\.\s", "", line)
+		tag_lst.append(ParentNode("li", text_to_children(clean)))
+	return tag_lst
+
+def strip_block_quote(block: str) -> str:
+	strip = []
+	for line in block.split("\n"):
+		strip.append(re.sub(r"^\>\s*", "", line))
+	return " ".join(strip)
+
+def text_to_children(text: str) -> list["ParentNode"]:
+	TxtLst = text_to_textnodes(text)
+	HtmlLst = []
+	for TxtNod in TxtLst:
+		HtmlLst.append(text_node_to_html_node(TxtNod))
+	return HtmlLst
+
+def markdown_to_html_node(markdown: str) -> ParentNode:
+	markblocks = markdown_to_blocks(markdown)
+	Collectathon = []
+	for block in markblocks:
+		tag = None
+		clean = ""
+		type = block_to_block_type(block)
+		if type == BlockType.BLOCK:
+			tag = "p"
+			strip = block.split("\n")
+			clean = " ".join(strip)
+		if type == BlockType.HEAD:
+			num = count_block_hash(block)
+			tag = f"h{num}"
+			clean = block[num+1:]
+		if type == BlockType.QUOTE:
+			tag = "blockquote"
+			clean = strip_block_quote(block)
+		if tag is not None:
+			HtmlNod = ParentNode(tag, text_to_children(clean))
+
+		if type == BlockType.CODE:
+			HtmlNod = ParentNode(
+				"pre",
+				[ParentNode(
+					"code",
+					[text_node_to_html_node(
+						TextNode(
+							block[4:-3],
+							TextType.PLAIN_TYPE,
+						),
+					)],
+				)],
+			)
+		if type == BlockType.UNORD_LST:
+			HtmlNod = ParentNode("ul", list_items_tagged(block, type))
+		if type == BlockType.ORDER_LST:
+			HtmlNod = ParentNode("ol", list_items_tagged(block, type))
+
+		Collectathon.append(HtmlNod)
+	return ParentNode("div", Collectathon)
